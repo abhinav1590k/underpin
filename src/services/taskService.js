@@ -1,0 +1,106 @@
+const { v4: uuidv4 } = require('uuid');
+
+let tasks = [];
+
+const getAll = () => [...tasks];
+
+const findById = (id) => tasks.find((task) => task.id === id);
+
+const getByStatus = (status) => tasks.filter((task) => task.status === status);
+
+const getPaginated = (page, limit) => {
+  const offset = (page - 1) * limit;
+  return tasks.slice(offset, offset + limit);
+};
+
+const getStats = () => {
+  const now = new Date();
+  const counts = { todo: 0, in_progress: 0, done: 0 };
+  let overdue = 0;
+
+  tasks.forEach((task) => {
+    if (counts[task.status] !== undefined) counts[task.status]++;
+    if (task.dueDate && task.status !== 'done' && new Date(task.dueDate) < now) {
+      overdue++;
+    }
+  });
+
+  return { ...counts, overdue };
+};
+
+const create = ({ title, description = '', status = 'todo', priority = 'medium', dueDate = null }) => {
+  const task = {
+    id: uuidv4(),
+    title,
+    description,
+    status,
+    priority,
+    dueDate,
+    completedAt: null,
+    createdAt: new Date().toISOString(),
+  };
+  tasks.push(task);
+  return task;
+};
+
+const update = (id, fields) => {
+  const index = tasks.findIndex((task) => task.id === id);
+  if (index === -1) return null;
+
+  const updated = { ...tasks[index], ...fields };
+  tasks[index] = updated;
+  return updated;
+};
+
+const remove = (id) => {
+  const index = tasks.findIndex((task) => task.id === id);
+  if (index === -1) return false;
+
+  tasks.splice(index, 1);
+  return true;
+};
+
+const completeTask = (id) => {
+  const task = findById(id);
+  if (!task) return null;
+
+  const updated = {
+    ...task,
+    priority: 'medium',
+    status: 'done',
+    completedAt: new Date().toISOString(),
+  };
+
+  const index = tasks.findIndex((item) => item.id === id);
+  tasks[index] = updated;
+  return updated;
+};
+
+const assignTask = (id, assignee) => {
+  const task = findById(id);
+  if (!task) return { task: null, alreadyAssigned: false };
+  if (task.assignee !== undefined) return { task, alreadyAssigned: true };
+
+  const updated = { ...task, assignee };
+  const index = tasks.findIndex((item) => item.id === id);
+  tasks[index] = updated;
+  return { task: updated, alreadyAssigned: false };
+};
+
+const _reset = () => {
+  tasks = [];
+};
+
+module.exports = {
+  getAll,
+  findById,
+  getByStatus,
+  getPaginated,
+  getStats,
+  create,
+  update,
+  remove,
+  completeTask,
+  assignTask,
+  _reset,
+};
